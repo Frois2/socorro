@@ -196,33 +196,6 @@ public class SocorroTest {
         Location location=location(-23.55,-46.63);location.setSpeed(5);readings.acceptPressure(1013.25f,1000000000L);readings.temperature=24;
         JSONObject withGps=TelemetryPayload.create(context,location,readings,2,3.5);assertEquals(noGps.getString("device_id"),withGps.getString("device_id"));assertEquals(18,withGps.getDouble("velocidade"),0.001);assertEquals(1013.25,withGps.getDouble("pressao"),0.01);assertEquals(24,withGps.getDouble("temperatura"),0.001);assertEquals(3.5,withGps.getDouble("nivel_queda"),0.001);
     }
-    @Test public void manualSendUsesNameDraftWithoutStartingMonitoring() throws Exception {
-        waitFor(()->!SyncManager.busy,5000);try(Outbox db=new Outbox(context)){db.getWritableDatabase().delete("pending",null,null);}
-        final java.util.concurrent.atomic.AtomicReference<JSONObject> captured=new java.util.concurrent.atomic.AtomicReference<>();
-        ApiClient.transport=(method,url,body)->{if(!method.equals("POST"))return new JSONObject();JSONObject request=new JSONObject(body);captured.set(request);return new JSONObject().put("status","sucesso").put("id",701).put("usuario",request.getString("usuario")).put("tipo_registro",1);};
-        MainActivity activity=launch();
-        try{
-            main(()->{activity.selectTab(3);((EditText)activity.findViewById(android.R.id.content).findViewWithTag("profileName")).setText("Enzo envio manual");activity.findViewById(android.R.id.content).findViewWithTag("sendNow").performClick();});
-            waitFor(()->captured.get()!=null&&context.getSharedPreferences("socorro",0).getString("lastSyncUser","").equals("Enzo envio manual")&&!SyncManager.busy,8000);
-            assertFalse(MonitorService.running);assertEquals("Enzo envio manual",captured.get().getString("usuario"));assertEquals(1,captured.get().getInt("tipo_registro"));
-            try(Outbox db=new Outbox(context)){assertEquals(0,db.pendingCount());Outbox.Event event=db.events(false).get(0);assertEquals("701",event.remoteId);assertEquals("Enzo envio manual",new JSONObject(event.payload).getString("usuario"));}
-            main(()->activity.selectTab(0));screenshot("inicio-envio-confirmado");
-            main(()->activity.selectTab(3));View status=activity.findViewById(android.R.id.content).findViewWithTag("apiState");main(()->status.requestRectangleOnScreen(new android.graphics.Rect(0,0,status.getWidth(),status.getHeight()),true));screenshot("api-confirmada");
-        }finally{main(activity::finish);}
-    }
-    @Test public void rejectedPostPreservesNameAndPendingDataUntilRetry() throws Exception {
-        waitFor(()->!SyncManager.busy,5000);try(Outbox db=new Outbox(context)){db.getWritableDatabase().delete("pending",null,null);}
-        ApiClient.transport=(method,url,body)->ApiClient.parseResponse(405,"<html>405 Not Allowed</html>");
-        MainActivity activity=launch();
-        try{
-            main(()->{activity.selectTab(3);((EditText)activity.findViewById(android.R.id.content).findViewWithTag("profileName")).setText("Nome preservado");activity.findViewById(android.R.id.content).findViewWithTag("sendNow").performClick();});
-            waitFor(()->context.getSharedPreferences("socorro",0).getString("syncError","").contains("405")&&!SyncManager.busy,8000);
-            try(Outbox db=new Outbox(context)){assertEquals(1,db.pendingCount());assertEquals("Nome preservado",new JSONObject(db.first().body).getString("usuario"));assertEquals("Aguardando reenvio",db.events(false).get(0).state);}
-            main(()->activity.selectTab(0));screenshot("api-envio-pendente");
-            ApiClient.transport=(method,url,body)->new JSONObject("{\"status\":\"sucesso\",\"id\":702}");SyncManager.flush(context,null);
-            waitFor(()->{try(Outbox db=new Outbox(context)){return db.pendingCount()==0&&!SyncManager.busy;}},8000);assertEquals("",context.getSharedPreferences("socorro",0).getString("syncError","erro"));
-        }finally{main(activity::finish);}
-    }
     @Test public void successWithoutIdDoesNotRemainPendingOrGetResent() throws Exception {
         waitFor(()->!SyncManager.busy,5000);try(Outbox db=new Outbox(context)){db.getWritableDatabase().delete("pending",null,null);db.add(1,"{\"usuario\":\"Nome original\",\"tipo_registro\":1}",0,"Registro","Teste");}
         AtomicInteger calls=new AtomicInteger();ApiClient.transport=(method,url,body)->{calls.incrementAndGet();return new JSONObject("{\"status\":\"sucesso\"}");};

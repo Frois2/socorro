@@ -95,3 +95,7 @@ Validação da versão 1.3: compilação e lint aprovados, oito testes instrumen
 ## Compatibilidade 1.3.1
 
 Restaurada a confirmação por `status: sucesso`, sem tornar ID, nome ou tipo retornados requisitos adicionais. Retomado o envio automático na primeira localização e a cada minuto. O endereço, o POST JSON e as unidades do Swagger permanecem iguais à versão 1.2. O envio manual e os ajustes visuais foram preservados. A falha observada na rede de teste não identifica, por si só, a causa de um problema no celular do usuário. O Galaxy A34 não disponibiliza sensor de temperatura ambiente; essa indicação foi esclarecida na tela, sem substituir a leitura ausente por temperatura da bateria ou previsão online.
+
+## Versão 1.3.2
+
+Removido o cartão Dados para a API do Início e dos Ajustes, incluindo o botão de envio manual. O nome permanece em Ajustes e o envio automático durante o monitoramento continua pela mesma integração. As confirmações e pendências continuam no Histórico. As descrições anteriores de envio manual referem-se às versões 1.3 e 1.3.1.
