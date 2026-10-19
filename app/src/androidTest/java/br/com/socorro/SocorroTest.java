@@ -142,6 +142,38 @@ public class SocorroTest {
             });
         }finally{main(activity::finish);}
     }
+    @Test public void motionSensorUnitsAndLightEventsAreConsistent() throws Exception {
+        context.getSharedPreferences("socorro",0).edit().putString("themeMode","auto").commit();
+        MainActivity activity=launch();
+        try{
+            Field field=MainActivity.class.getDeclaredField("readings");field.setAccessible(true);
+            SensorReadings readings=(SensorReadings)field.get(activity);
+            android.hardware.SensorManager manager=(android.hardware.SensorManager)context.getSystemService(Context.SENSOR_SERVICE);
+            Constructor<android.hardware.SensorEvent> constructor=android.hardware.SensorEvent.class.getDeclaredConstructor(int.class);constructor.setAccessible(true);
+            main(()->{
+                try{
+                    activity.selectTab(1);
+                    int[] types={android.hardware.Sensor.TYPE_ACCELEROMETER,android.hardware.Sensor.TYPE_ACCELEROMETER,android.hardware.Sensor.TYPE_GYROSCOPE,android.hardware.Sensor.TYPE_LIGHT,android.hardware.Sensor.TYPE_LIGHT};
+                    float gravity=android.hardware.SensorManager.GRAVITY_EARTH;
+                    float[][] values={{gravity,0,0},{0,0,2*gravity},{3,4,0},{0},{200}};
+                    for(int i=0;i<types.length;i++){
+                        android.hardware.SensorEvent event=constructor.newInstance(values[i].length);
+                        event.sensor=manager.getDefaultSensor(types[i]);assertNotNull(event.sensor);
+                        System.arraycopy(values[i],0,event.values,0,values[i].length);event.timestamp=SystemClock.elapsedRealtimeNanos();
+                        activity.onSensorChanged(event);
+                        if(i==0){assertEquals(1,readings.g,0.0001);assertEquals(gravity,readings.acceleration[0],0.0001);}
+                        if(i==1){assertEquals(2,readings.g,0.0001);assertEquals(2*gravity,readings.acceleration[2],0.0001);}
+                        if(i==2){assertEquals(5,readings.gyro,0.0001);assertEquals(3,readings.rotation[0],0.0001);assertEquals(4,readings.rotation[1],0.0001);}
+                        if(i>=3){
+                            assertEquals(values[i][0],readings.light,0.0001);
+                            int color=((android.graphics.drawable.ColorDrawable)activity.findViewById(android.R.id.content).findViewWithTag("root").getBackground()).getColor();
+                            if(i==3)assertEquals(android.graphics.Color.BLACK,color);else assertNotEquals(android.graphics.Color.BLACK,color);
+                        }
+                    }
+                }catch(Exception error){throw new RuntimeException(error);}
+            });
+        }finally{main(activity::finish);}
+    }
     @Test public void automaticThemeRespondsToSensorEvents() throws Exception {
         context.getSharedPreferences("socorro",0).edit().putString("themeMode","auto").putBoolean("autoNight",true).putInt("themeThreshold",60).commit();
         MainActivity activity=launch();
