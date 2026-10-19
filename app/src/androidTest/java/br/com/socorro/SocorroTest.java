@@ -143,7 +143,7 @@ public class SocorroTest {
         }finally{main(activity::finish);}
     }
     @Test public void motionSensorUnitsAndLightEventsAreConsistent() throws Exception {
-        context.getSharedPreferences("socorro",0).edit().putString("themeMode","auto").commit();
+        context.getSharedPreferences("socorro",0).edit().putString("themeMode","auto").putInt("themeThreshold",500).commit();
         MainActivity activity=launch();
         try{
             Field field=MainActivity.class.getDeclaredField("readings");field.setAccessible(true);

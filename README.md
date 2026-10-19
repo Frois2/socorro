@@ -101,3 +101,7 @@ Restaurada a confirmação por `status: sucesso`, sem tornar ID, nome ou tipo re
 Revisão dos sensores: confirmadas as unidades do acelerômetro (m/s² nos eixos e módulo em G), giroscópio (rad/s) e luminosidade (lux). Passaram 35 verificações independentes e quatro testes instrumentados no emulador, incluindo eventos simulados nos eixos, modos de tema e mudança automática de fundo preto para claro com luminosidade de 5 para 300 lux. Compilação e lint aprovados. A validação no emulador não substitui a conferência das leituras no Galaxy A34.
 
 Removido o cartão Dados para a API do Início e dos Ajustes, incluindo o botão de envio manual. O nome permanece em Ajustes e o envio automático durante o monitoramento continua pela mesma integração. As confirmações e pendências continuam no Histórico. As descrições anteriores de envio manual referem-se às versões 1.3 e 1.3.1.
+
+## Versão 1.3.3
+
+Removido o controle manual de limite de luminosidade e suas indicações nas telas. O tema automático usa diretamente a leitura em lux com uma faixa interna estável para evitar oscilações; configurações antigas de limite são ignoradas. A leitura do sensor não foi alterada.

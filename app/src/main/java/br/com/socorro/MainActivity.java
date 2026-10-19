@@ -257,9 +257,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         int themeSelection=0;for(int i=0;i<themeValues.length;i++)if(themeValues[i].equals(themeMode()))themeSelection=i;themePicker.setSelection(themeSelection);
         themePicker.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener(){public void onNothingSelected(AdapterView<?> p){}public void onItemSelected(AdapterView<?> p,View v,int pos,long id){if(v instanceof TextView)((TextView)v).setTextColor(ink);if(!themeValues[pos].equals(themeMode())){prefs.edit().putString("themeMode",themeValues[pos]).putBoolean("autoNight",pos==0).apply();lightThemeInitialized=false;updateLightTheme(SystemClock.elapsedRealtime());}}});display.addView(themePicker,new LinearLayout.LayoutParams(-1,dp(52)));
         space(display,8);display.addView(label("themeDiagnostic","Aguardando sensor de luminosidade",12,ink,false));space(display,8);
-        display.addView(label("themeThreshold","",12,muted,false));SeekBar threshold=new SeekBar(this);threshold.setTag("themeThreshold");threshold.setMax(49);threshold.setProgress(themeThreshold()/10-1);
-        threshold.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){public void onStartTrackingTouch(SeekBar bar){}public void onStopTrackingTouch(SeekBar bar){lightThemeInitialized=false;updateLightTheme(SystemClock.elapsedRealtime());}public void onProgressChanged(SeekBar bar,int progress,boolean user){if(user){prefs.edit().putInt("themeThreshold",(progress+1)*10).apply();set("themeThreshold","Limite do automático: "+themeThreshold()+" lux");}}});display.addView(threshold,new LinearLayout.LayoutParams(-1,dp(48)));
-        display.addView(text("No automático, ambientes abaixo do limite ficam pretos; acima ficam claros. Uma margem de 10 lux evita piscadas. Ajuste o limite se o ambiente continuar claro ou escuro demais. Não é necessário iniciar o monitoramento.",12,muted,false));addCard(display);
+        display.addView(text("O tema acompanha a luz do ambiente: fundo preto no escuro e claro em ambientes iluminados. Não é necessário iniciar o monitoramento.",12,muted,false));addCard(display);
         LinearLayout permissions=card();permissions.addView(text("Permissões",16,ink,true));space(permissions,8);permissions.addView(text("Localização: "+(hasLocation()?"permitida":"não permitida")+"\nNotificações: "+(notificationsAllowed()?"permitidas":"desativadas")+"\nSMS: "+(checkSelfPermission(Manifest.permission.SEND_SMS)==PackageManager.PERMISSION_GRANTED?"permitido":"não permitido"),12,muted,false));Button settings=outlineButton("Abrir configurações do Android");space(permissions,10);settings.setOnClickListener(v->startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:"+getPackageName()))));permissions.addView(settings);addCard(permissions);
         LinearLayout background=card();background.addView(text("Monitoramento em segundo plano",16,ink,true));space(background,8);
         PowerManager power=(PowerManager)getSystemService(POWER_SERVICE);
@@ -339,15 +337,14 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
             if(tab==0){JSONArray p=MonitorService.running?db.points(MonitorService.tripId):new JSONArray();Location l=currentLocation();if(p.length()==0&&MonitorService.fresh(l))p.put(new JSONArray(Arrays.asList(l.getLatitude(),l.getLongitude())));if(trace!=null)trace.update(p,dark);}
             if(tab==2&&historyRevision!=Outbox.revision.get())refreshHistory();
         }
-        if(tab==3){set("themeDiagnostic",themeDescription());set("themeThreshold","Limite do automático: "+themeThreshold()+" lux");}
+        if(tab==3)set("themeDiagnostic",themeDescription());
         updateLightTheme(now);
     }
     private String themeMode(){return prefs.getString("themeMode",prefs.getBoolean("autoNight",true)?"auto":"system");}
-    private int themeThreshold(){return Math.max(10,Math.min(500,prefs.getInt("themeThreshold",60)));}
     private String themeDescription(){
         String mode=themeMode();String source=mode.equals("auto")?"Automático por luminosidade":mode.equals("dark")?"Escuro fixo":mode.equals("light")?"Claro fixo":"Seguindo o Android";
         String sensor=!readings.available[3]?"sensor de luz ausente":!readings.listening[3]?"sensor sem leitura ativa":!Float.isFinite(readings.light)?"aguardando primeira leitura":String.format(Locale.getDefault(),"sensor: %.1f lux",readings.light);
-        return source+" · "+(dark?"fundo preto":"fundo claro")+"\n"+sensor+(mode.equals("auto")?" · limite "+themeThreshold()+" lux":"");
+        return source+" · "+(dark?"fundo preto":"fundo claro")+"\n"+sensor;
     }
     private void updateLightTheme(long now){
         String mode=themeMode();
@@ -355,8 +352,7 @@ public class MainActivity extends Activity implements SensorEventListener, Locat
         if(mode.equals("light")){applyNight(false);return;}
         if(mode.equals("system")||!readings.available[3]){applyNight((getResources().getConfiguration().uiMode&Configuration.UI_MODE_NIGHT_MASK)==Configuration.UI_MODE_NIGHT_YES);return;}
         if(!Float.isFinite(readings.light)||readings.light<0)return;
-        int threshold=themeThreshold();
-        boolean desired=lightThemeInitialized?(dark?readings.light<threshold+10:readings.light<threshold-10):readings.light<threshold;
+        boolean desired=lightThemeInitialized?(dark?readings.light<70:readings.light<50):readings.light<60;
         lightThemeInitialized=true;
         if(desired!=dark)applyNight(desired);
     }
